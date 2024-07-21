@@ -1,0 +1,52 @@
+-- PARA QUE SERVE ##################################################################
+-- Serve para filtrar linhas de acordo com uma condição
+
+
+-- SINTAXE #########################################################################
+select coluna_1, coluna_2, coluna_3
+from schema_1.tabela_1
+where condição_x=true
+
+
+-- EXEMPLOS ########################################################################
+
+-- (Exemplo 1) Filtro com condição única
+-- Liste os emails dos clientes da nossa base que moram no estado de Santa Catarina
+select email, state
+from sales.customers
+where state='Santa Catarina' -- deu errado pq não sabemos como os estados estão no bd
+	
+select distinct state
+from sales.customers -- assim nós puxamos a tabela e vemos como os dados estão (em UF)
+	
+select email, state
+from sales.customers
+where state = 'SC' -- agora nós sabemos como pesquisar certinho
+
+
+-- (Exemplo 2) Filtro com mais de uma condição
+-- Liste os emails dos clientes da nossa base que moram no estado de Santa Catarina
+-- ou Mato Grosso do Sul
+select email, state
+from sales.customers
+where state = 'SC' or state = 'MS'
+
+
+-- (Exemplo 3) Filtro de condição com data
+-- Liste os emails dos clientes da nossa base que moram no estado de Santa Catarina 
+-- ou Mato Grosso do Sul e que tem mais de 30 anos
+select email, birth_date ,state
+from sales.customers
+where (state = 'SC' or state = 'MS') and birth_date < '1994-12-28'
+-- tbm da pra escrever datas sem os - dividindo 1994-12-28
+-- ficaria assim 19941228
+
+select distinct birth_date
+from sales.customers -- para descobrir como a data de nascimento está escrita
+
+-- RESUMO ##########################################################################
+-- (1) Comando utilizado para filtrar linhas de acordo com uma condição
+-- (2) No PostgreSQL são utilizadas aspas simples para delimitar strings 
+-- (3) string = sequência de caracteres = texto
+-- (4) Pode-se combinar mais de uma condição utilizando os operadores lógicos
+-- (5) No PostgreSQL as datas são escritas no formato 'YYYY-MM-DD' ou 'YYYYMMDD'
