@@ -1,0 +1,128 @@
+-- EXERCÍCIOS ########################################################################
+
+-- (Exercício 1) Identifique quais as marcas de veículo mais visitadas na tabela sales.funnel
+
+
+-- uma dica importante é ir montando a ideia com pequenas querys
+select *
+from sales.funnel -- product_id | visit_page_date
+limit 10
+
+select *
+from sales.products --product_id 
+limit 10
+
+
+	
+-- minha query:
+select
+	pro.brand,
+	count(fun.visit_page_date) as qntde_visitas
+	
+from sales.funnel as fun
+left join sales.products as pro
+	on fun.product_id = pro.product_id
+group by pro.brand
+order by qntde_visitas desc
+
+---------------------------------------------------------
+
+-- query professora:
+select 
+	pro.brand,
+	count(*) as visitas -- dessa forma achei confuso de entender o que está contando
+
+from sales.funnel as fun
+left join sales.products as pro
+	on fun.product_id = pro.product_id
+group by pro.brand
+order by visitas desc
+
+
+
+
+-- (Exercício 2) Identifique quais as lojas de veículo mais visitadas na tabela sales.funnel
+select * 
+from sales.products -- product_id
+limit 10
+	
+select *
+from sales.funnel -- visit_id | store_id | product_id
+limit 10
+
+select * 
+from sales.stores -- store_id | store_name
+limit 10
+
+	
+-- minha query:
+select
+	str.store_name,
+	str.store_id,
+	count(fun.visit_id) as visitas
+	
+from sales.funnel as fun
+left join sales.products as pro
+	on fun.product_id = pro.product_id
+
+left join sales.stores as str
+	on fun.store_id = str.store_id
+	
+group by str.store_id -- !!! o group by não pode ser usado com o elemento q está no count()
+order by visitas desc
+
+
+
+
+---------------------------------------------------------
+
+-- query professora:
+select 
+	sto.store_name,
+	count(*) as visitas
+
+from sales.funnel as fun
+left join sales.stores as sto
+	on fun.store_id = sto.store_id
+group by sto.store_name
+order by visitas desc
+
+
+
+
+-- (Exercício 3) Identifique quantos clientes moram em cada tamanho de cidade (o porte da cidade
+-- consta na coluna "size" da tabela temp_tables.regions)
+
+select *
+from temp_tables.regions -- city | state | size
+limit 10
+
+select * 
+from sales.customers -- city | state
+limit 10
+
+
+-- minha query:
+select
+	reg.size,
+	count(cus.customer_id) as quantidade
+from sales.customers as cus
+left join temp_tables.regions as reg
+	on lower(cus.city) = lower(reg.city)
+	and lower(cus.state) = lower(reg.state)
+group by reg.size
+order by quantidade desc
+
+
+---------------------------------------------------------
+
+-- query professora:
+select
+	reg.size,
+	count(*) as contagem
+from sales.customers as cus
+left join temp_tables.regions as reg
+	on lower(cus.city) = lower(reg.city)
+	and lower(cus.state) = lower(reg.state)
+group by reg.size
+order by contagem
