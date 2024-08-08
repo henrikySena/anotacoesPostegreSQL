@@ -1,0 +1,77 @@
+-- EXEMPLOS ########################################################################
+
+-- (Exemplo 1) Análise de recorrência dos leads (leads são clientes interessados)
+-- Calcule o volume de visitas por dia ao site separado por 1ª visita e demais visitas
+
+with primeira_visita as (
+
+	-- pega a primeira visita que cada customer_id fez
+	select customer_id, min(visit_page_date) as visita_1
+	from sales.funnel
+	group by customer_id
+)
+
+
+select
+	fun.visit_page_date,
+	(fun.visit_page_date <> primeira_visita.visita_1) as lead_recorrente,
+	count(*)
+	
+-- puxa todas visitas que ocorreram na sales.funnel
+-- cruzando as informações com a tabela de primeiras visitas
+from sales.funnel as fun
+left join primeira_visita
+	on fun.customer_id = primeira_visita.customer_id
+
+group by fun.visit_page_date, lead_recorrente
+order by fun.visit_page_date desc, lead_recorrente
+
+
+
+
+
+-- (Exemplo 2) Análise do preço versus o preço médio
+-- Calcule, para cada visita ao site, quanto o preço do um veículo visitado pelo cliente
+-- estava acima ou abaixo do preço médio dos veículos daquela marca 
+-- (levar em consideração o desconto dado no veículo)
+
+
+with preco_medio as (
+
+	-- subquery para encontrar o preço médio dos veículos de cada marca
+
+	select brand, avg(price) as preco_medio_da_marca
+	from sales.products
+	group by brand	
+)
+
+
+
+select
+
+	-- puxa todos os dados que vamos usar / visualizar
+	fun.visit_id,
+	fun.visit_page_date,
+	pro.brand,
+	(pro.price * (1+fun.discount)) as preco_final,
+	preco_medio.preco_medio_da_marca,
+
+	-- pega o preco_medio e compara com o preço que o cliente está vendo naquela visita
+	(pro.price * (1+fun.discount)) - preco_medio.preco_medio_da_marca as preco_vs_media
+
+	
+-- diz de que tabelas serão feitas as extração dos dados
+-- faz left join entre as tabelas para cruzar os dados
+from sales.funnel as fun
+left join sales.products as pro
+
+	-- ligando as tabelas pelo id do produto (veículos)
+	on fun.product_id = pro.product_id
+
+	-- cruza isso com a tabela que nos da o preço médio por marca
+	-- a tabela que nós criamos, ligando ela pela marca do veículo (brand)
+left join preco_medio
+	on pro.brand = preco_medio.brand
+
+
+

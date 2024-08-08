@@ -1,0 +1,55 @@
+-- EXERCÍCIOS ########################################################################
+
+-- (Exercício 1) Crie uma coluna calculada com o número de visitas realizadas por cada
+-- cliente da tabela sales.customers
+
+
+select * 
+from sales.customers -- customer_id
+limit 10
+
+select * 
+from sales.funnel -- customer_id | visit_id
+limit 10
+
+
+with qntde_visitas as (
+	select
+		customer_id,
+		count(visit_page_date) as contagem
+	from sales.funnel as fun
+	group by customer_id
+)
+
+
+select
+	cus.*,
+	contagem
+	
+from sales.customers as cus
+left join qntde_visitas as qtv
+	on cus.customer_id = qtv.customer_id
+order by contagem desc
+
+
+---------------------------------------------------------
+-- resolução professora
+with numero_de_visitas as (
+
+	select customer_id, count(*) as n_visitas
+	from sales.funnel
+	group by customer_id
+
+)
+
+select
+	cus.*,
+	n_visitas
+
+from sales.customers as cus
+left join numero_de_visitas as ndv
+	on cus.customer_id = ndv.customer_id
+
+
+
+
