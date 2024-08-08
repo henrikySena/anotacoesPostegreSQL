@@ -1,0 +1,164 @@
+-- PARA QUE SERVE ##################################################################
+-- Servem para consultar dados de outras consultas.
+-- consultar uma query dentro de outra query
+
+
+-- TIPOS ###########################################################################
+-- Subquery no WHERE
+-- Subquery com WITH
+-- Subquery no FROM
+-- Subquery no SELECT
+
+
+-- EXEMPLOS ########################################################################
+
+-- (Exemplo 1) Subquery no WHERE
+-- Informe qual é o veículo mais barato da tabela products
+
+-- primeiro constrói a ideia:
+select * 
+from sales.products
+where price = menor_preco
+
+-- depois constrói a subconsulta que você quer fazer:
+select min(price) from sales.products
+
+
+-- agora é só juntar tudo:
+select * 
+from sales.products
+where price = (select min(price) from sales.products)
+
+
+
+
+
+-- (Exemplo 2) Subquery com WITH
+-- Calcule a idade média dos clientes por status profissional
+
+select 
+	professional_status,
+	avg(idade) as idade_media
+from alguma_tabela
+group professional_status
+
+
+select
+	professional_status,
+	(current_date - birth_date)/365 as idade -- código para conseguir a idade (q eu sempre esqueço)
+from sales.customers
+
+
+	
+-- código final:
+	
+with alguma_tabela as (
+	select
+	professional_status,
+	(current_date - birth_date)/365 as idade
+from sales.customers
+)
+
+select 
+	professional_status,
+	avg(idade) as idade_media
+from alguma_tabela
+group by professional_status
+
+---------------------------------------------------------
+-- uma explicaçãozinha do q rola no with
+---------------------------------------------------------
+
+-- com o with a gente cria uma 'variável' e coloca nela
+-- oq a gente vai querer consulta quando chama-la
+
+-- depois é construída a query normal, pedindo para o from
+-- extrair os dados dessa 'variável'
+---------------------------------------------------------
+
+
+
+
+
+-- (Exemplo 3) Subquery no FROM
+-- Calcule a média de idades dos clientes por status profissional
+
+select 
+	professional_status,
+	avg(idade) as idade_media
+from (
+	select
+		professional_status,
+		(current_date - birth_date)/365 as idade
+	from sales.customers
+) as alguma_tabela -- não é necessário dar nome para que funcione
+group by professional_status
+
+
+---------------------------------------------------------
+-- uma explicaçãozinha do q rola no from
+---------------------------------------------------------
+
+-- acontece a mesma coisa que no with
+-- só que ao invés de criar uma 'variável'
+-- se coloca a subquery direto no from
+
+-- embora seja muito comum encontrar código assim,
+-- não é recomendado por todas as subquerys no from
+-- serem substituíveis no with
+
+-- as subquerys utilizando o with são muito mais 
+-- legíveis e organizadas.
+---------------------------------------------------------
+
+
+
+
+
+-- (Exemplo 4) Subquery no SELECT
+-- Na tabela sales.funnel crie uma coluna que informe o nº de visitas acumuladas 
+-- que a loja visitada recebeu até o momento
+
+select
+	fun.visit_id,
+	fun.visit_page_date,
+	sto.store_name,
+	(
+		select count(*)
+		from sales.funnel as fun2
+		where fun2.visit_page_date <= fun.visit_page_date
+			and fun2.store_id = fun.store_id
+	) as visitas_acumuladas
+
+	
+from sales.funnel as fun
+left join sales.stores as sto
+	on fun.store_id = sto.store_id
+order by sto.store_name, fun.visit_page_date
+
+
+---------------------------------------------------------
+-- uma explicaçãozinha do q rolou no select
+---------------------------------------------------------
+
+-- primeiro que é uma query que demora minutos
+-- é mt pesada mas as vezes é a única que podemos usar
+-- para responder uma pergunta
+
+
+-- assim como a subquery no where, a subquery no select
+-- só pode retornar um dado
+
+---------------------------------------------------------
+
+
+
+
+
+
+-- RESUMO ##########################################################################
+-- (1) Servem para consultar dados de outras consultas.
+-- (2) Para que as subqueries no WHERE e no SELECT funcionem, elas devem retornar 
+-- apenas um único valor
+-- (3) Não é recomendado utilizar subqueries diretamente dentro do FROM pois isso 
+-- dificulta a legibilidade da query. 
