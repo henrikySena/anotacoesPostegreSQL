@@ -4,6 +4,8 @@
 -- é um comando avançado que não é muito usado, mas caso um dia precise:
 
 
+
+
 -- EXEMPLOS ########################################################################
 
 -- (Exemplo 1) Crie uma função chamada DATEDIFF para calcular a diferença entre
@@ -39,6 +41,11 @@ $$
 -- uma nota: o 'diferenca' em 'end as' é o nome da coluna que a function utiliza (ela não aparece para nós)
 
 select datediff('y', '2021-02-04', current_date)
+
+
+
+
+
 
 
 
