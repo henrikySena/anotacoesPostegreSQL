@@ -1,0 +1,275 @@
+-- (Query 1) Gênero dos leads -------------------------------------------------------------------------------
+-- Colunas: gênero, leads(#)
+
+-- rascunhos para saber quais dados pegar:
+select * from sales.customers limit 10 -- customer_id | first_name
+
+select * from temp_tables.ibge_genders limit 10
+
+
+-- pega o gênero dos leads (baseado no first_name):
+select
+	cus.first_name,
+	gen.gender
+from sales.customers as cus
+left join temp_tables.ibge_genders as gen
+	on lower(cus.first_name) = lower(gen.first_name)
+
+
+-- pega a quantidade de leads femininos e masculinos:
+select
+	count(cus.first_name),
+	gen.gender
+from sales.customers as cus
+left join temp_tables.ibge_genders as gen
+	on lower(cus.first_name) = lower(gen.first_name)
+group by gen.gender
+
+
+-- pega a quantidade de leads e sepada por femininos e masculinos:
+select
+	case 
+		when gen.gender = 'male' then 'Masculino'
+		when gen.gender = 'female' then 'Feminino'
+	end as "gênero",
+	count(*) as "leads (#)"
+
+from sales.customers as cus
+left join temp_tables.ibge_genders as gen
+	on lower(cus.first_name) = lower(gen.first_name)
+group by gen.gender
+
+
+------------------ NOTA ------------------
+-- é importante colocar o case when para 
+-- a identificação dos dados no excel.
+
+-- sem ele, o gráfico não sabe quem 
+-- são as colunas e quem são os dados
+------------------------------------------
+
+
+
+
+
+
+
+
+-- (Query 2) Status profissional dos leads ------------------------------------------------------------------
+-- Colunas: status profissional, leads (%)
+	
+-- rascunhos para saber quais dados pegar:
+select * from sales.customers limit 10 -- professional_status 
+
+
+select
+	professional_status
+from sales.customers
+group by professional_status
+
+	
+-- é possível fazer com o distinct também
+select distinct
+	professional_status
+from sales.customers
+
+
+-- usando o distinct, o resultado de professional_status
+-- fica em ordem alfabética, mas não usaremos ele 
+-- para ordenar as colunas
+select 
+	case 
+		when professional_status = 'freelancer' then 'Freelancer'
+		when professional_status = 'retired' then 'Aposentado(a)'
+		when professional_status = 'clt' then 'CLT'
+		when professional_status = 'self_employed' then 'Autônomo(a)'
+		when professional_status = 'other' then 'Outro'
+		when professional_status = 'businessman' then 'Empresário(a)'
+		when professional_status = 'civil_servant' then 'Funcionário(a) Público(a)'
+		when professional_status = 'student' then 'Estudante'
+	end as "staus profissional",
+	(count(*)::float)/(select count(*) from sales.customers) as "Leads (%)"
+from sales.customers
+group by professional_status
+order by "leads (%)"
+
+
+-- (Query 3) Faixa etária dos leads -------------------------------------------------------------------------
+-- Colunas: faixa etária, leads (%)
+
+
+-- cria a função datediff
+create function datediff(type varchar, date_from date, date_to date)
+returns integer
+language sql
+
+as
+	
+$$
+select
+
+case 
+	when type in ('d', 'day', 'days') then (date_to - date_from)
+	when type in ('w', 'week', 'weeks') then (date_to - date_from)/7
+	when type in ('m', 'month', 'months') then (date_to - date_from)/30
+	when type in ('y', 'year', 'years') then (date_to - date_from)/365
+end
+$$
+
+
+
+-- como os dados estão desatualizados, decidi mudar a faixa etária para
+-- melhor enquadrar os dados.
+-- a professora usa as faixas etárias de 20 em 20 anos, porém com o tempo
+-- que o curso possui, todos os clientes possuem no mínino 20 anos
+-- (query realizada no dia 26 de agosto, 2024)
+select    
+    case
+        when datediff('years', birth_date, current_date) < 25 then '0-25'
+        when datediff('years', birth_date, current_date) < 40 then '25-40'
+        when datediff('years', birth_date, current_date) < 65 then '40-65'        
+        when datediff('years', birth_date, current_date) < 80 then '65-80'
+        else '80+'
+    end as "Faixa Etária",
+    (count(*)::float)/(select count(*) from sales.customers) as "Leads (%)"
+from sales.customers
+group by "Faixa Etária"order by "Faixa Etária"
+
+
+
+
+
+
+
+
+-- (Query 4) Faixa salarial dos leads -----------------------------------------------------------------------
+-- Colunas: faixa salarial, leads (%), ordem
+
+select    
+    case
+        when income < 5000 then '0-5000'
+		when income < 10000 then '5000-10000'
+		when income < 15000 then '10000-15000'
+		when income < 20000 then '15000-20000'
+        else '20000+'
+    end as "Faixa Salarial",
+    (count(*)::float)/(select count(*) from sales.customers) as "Leads (%)",
+	
+	case
+		when income < 5000 then 1
+		when income < 10000 then 2
+		when income < 15000 then 3
+		when income < 20000 then 4
+        else 5
+    end as "ordem"
+	
+from sales.customers
+group by "Faixa Salarial", "ordem"
+order by "ordem"
+
+
+
+
+
+
+
+
+-- (Query 5) Classificação dos veículos visitados -----------------------------------------------------------
+-- Colunas: classificação do veículo, veículos visitados (#)
+-- Regra de negócio: Veículos novos tem até 2 anos e seminovos acima de 2 anos
+
+-- NOTA: quando não temos um critério pré-definido no bancode de dados, usamos regras de negócio
+
+with
+	classificacao_veiculo as (
+
+		select
+			fun.visit_page_date,
+			pro.model_year,
+			extract('year' from visit_page_date) - pro.model_year::int as idade_veiculo,
+			case when (extract('year' from visit_page_date) - pro.model_year::int) <=2 then 'Veículo novo'
+			else 'Seminovo'
+			end as "classificacao do veículo"
+
+
+		from sales.funnel as fun
+		left join sales.products as pro
+			on fun.product_id = pro.product_id
+	)
+
+
+select 
+	"classificacao do veículo",
+	count(*) as "Veículos Visitados (#)"
+from classificacao_veiculo
+group by "classificacao do veículo"
+order by "Veículos Visitados (#)"
+
+
+
+
+
+
+
+
+-- (Query 6) Idade dos veículos visitados -------------------------------------------------------------------
+-- Colunas: Idade do veículo, veículos visitados (%), ordem
+
+with 
+	faixa_de_idade_dos_veiculos as (
+		select
+			fun.visit_page_date,
+			pro.model_year,
+			extract('year' from visit_page_date) - pro.model_year::int as idade_veiculo,
+			case 
+				when (extract('year' from visit_page_date) - pro.model_year::int) <= 2 then 'Entre 2 anos'
+				when (extract('year' from visit_page_date) - pro.model_year::int) <= 4 then 'De 2 a 4 anos'
+				when (extract('year' from visit_page_date) - pro.model_year::int) <= 6 then 'De 4 a 6 anos'
+				when (extract('year' from visit_page_date) - pro.model_year::int) <= 8 then 'De 4 a 8 anos'
+				when (extract('year' from visit_page_date) - pro.model_year::int) <= 10 then 'De 8 a 10 anos'
+				else 'Acima de 10 anos'
+				end as "idade do veículo",
+			case 
+				when (extract('year' from visit_page_date) - pro.model_year::int) <= 2 then 1
+				when (extract('year' from visit_page_date) - pro.model_year::int) <= 4 then 2
+				when (extract('year' from visit_page_date) - pro.model_year::int) <= 6 then 3
+				when (extract('year' from visit_page_date) - pro.model_year::int) <= 8 then 4
+				when (extract('year' from visit_page_date) - pro.model_year::int) <= 10 then 5
+				else 6
+				end as "ordem"
+
+		from sales.funnel as fun
+		left join sales.products as pro
+			on fun.product_id = pro.product_id		
+	)
+
+select
+	"idade do veículo",
+	count(*)::float/(select count(*) from sales.funnel) as "veículos visitados (%)"
+
+from faixa_de_idade_dos_veiculos
+group by "idade do veículo", "ordem"
+order by ordem
+
+
+
+
+
+
+
+
+-- (Query 7) Veículos mais visitados por marca --------------------------------------------------------------
+-- Colunas: brand, model, visitas (#)
+
+select
+	pro.brand,
+	pro.model,
+	count(*) as "visitas (#)"
+
+from sales.funnel as fun
+left join sales.products as pro
+	on fun.product_id = pro.product_id
+group by pro.brand, pro.model
+order by pro.brand, pro.model, "visitas (#)"
+
+
