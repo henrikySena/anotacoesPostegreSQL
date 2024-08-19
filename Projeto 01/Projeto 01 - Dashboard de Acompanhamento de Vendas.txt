@@ -62,7 +62,7 @@ select * from sales.funnel limit 10
 
 
 select
-	'Brazil' as país,
+	'BR' as país,
 	cus.state as  estado,
 	count(fun.paid_date) as "vendas (#)"
 	
